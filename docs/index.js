@@ -6,7 +6,7 @@ let width;
 let height;
 let tick;
 let minTick = 0;
-let zoom = 8;
+let zoom = 1;
 let cursor = undefined;
 let cursorMode = 1;
 let showGrid = false;
@@ -148,6 +148,9 @@ function loadState(data, w)
 {
 	width = w;
 	height = Math.floor(data.length / w);
+	document.getElementById("width").valueAsNumber = width;
+	document.getElementById("height").valueAsNumber = height;
+	zoom = Math.max(1, Math.min(32, 1 << Math.floor(Math.log2(512 / Math.max(width, height)))));
 	resizeCanvas();
 	tick = 0;
 	ringBuffer = new Array(1024);
@@ -159,7 +162,14 @@ function loadState(data, w)
 	render();
 }
 
-async function share()
+function reset()
+{
+	const w = Math.max(1, Math.floor(document.getElementById("width").valueAsNumber));
+	const h = Math.max(1, Math.floor(document.getElementById("height").valueAsNumber));
+	loadState(new Uint8Array(w * h), w);
+}
+
+function share()
 {
 	const data = ringBuffer[tick % ringBuffer.length];
 	const offset = tick % 2;
