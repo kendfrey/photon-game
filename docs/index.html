@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Photon Game Simulator</title>
+	<link rel="stylesheet" href="index.css">
+</head>
+<body>
+	<button style="float: right;" onclick="toggleTheme()">Theme</button>
+	<div id="controls">
+		<button onclick="back()">Back</button>
+		<button onclick="stop()">Stop</button>
+		<button onclick="stop(); step()">Step</button>
+		<button onclick="go(1000)">Slow</button>
+		<button onclick="go(100)">Medium</button>
+		<button onclick="go(10)">Fast</button>
+		<button onclick="go(0)">Unlimited</button>
+	</div>
+	<canvas></canvas>
+	<script src="index.js"></script>
+</body>
+</html>
