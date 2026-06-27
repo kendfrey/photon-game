@@ -16,7 +16,20 @@
 		<button onclick="go(10)">Fast</button>
 		<button onclick="go(0)">Unlimited</button>
 	</div>
-	<canvas></canvas>
+	<div>
+		<button onclick="toggleGrid()">Show Grid</button>
+		<button onclick="cursorMode = 1">Draw Photons</button>
+		<button onclick="cursorMode = 2">Draw Device</button>
+	</div>
+	<canvas
+		onwheel="zoomIn(event)"
+		onmousemove="mouse(event)"
+		onmousedown="mouse(event)"
+		onmouseup="mouse(event)"
+		onmouseleave="mouse(event)"
+		oncontextmenu="event.preventDefault()"
+	>
+	</canvas>
 	<script src="index.js"></script>
 </body>
 </html>

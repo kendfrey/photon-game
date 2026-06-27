@@ -7,6 +7,9 @@ let height;
 let tick;
 let minTick = 0;
 let zoom = 8;
+let cursor = undefined;
+let cursorMode = 1;
+let showGrid = false;
 let interval = undefined;
 let timeout = undefined;
 let darkMode;
@@ -219,6 +222,65 @@ function render()
 			}
 		}
 	}
+
+	if (cursor)
+	{
+		ctx.strokeStyle = cursorMode === 1 ? "#00cc00" : (darkMode ? "white" : "black");
+		ctx.strokeRect(cursor.x * zoom + 0.5, cursor.y * zoom + 0.5, zoom - 1, zoom - 1);
+	}
+
+	if (showGrid && zoom >= 4)
+	{
+		ctx.fillStyle = "#7f7f7f";
+		for (let y = tick % 2; y <= height; y += 2)
+		{
+			for (let x = tick % 2; x <= width; x += 2)
+			{
+				ctx.fillRect((x - 0.125) * zoom, (y - 0.125) * zoom, zoom * 0.25, zoom * 0.25);
+			}
+		}
+	}
+}
+
+function zoomIn(event)
+{
+	event.preventDefault();
+	if (event.deltaY < 0)
+		zoom = Math.min(zoom * 2, 32);
+	else if (event.deltaY > 0)
+		zoom = Math.max(zoom * 0.5, 1);
+	resizeCanvas();
+	render();
+}
+
+function mouse(event)
+{
+	let x = Math.floor(event.offsetX / zoom);
+	let y = Math.floor(event.offsetY / zoom);
+	if (x < 0 || x >= width || y < 0 || y >= height)
+	{
+		cursor = undefined;
+		render();
+		return;
+	}
+	const data = ringBuffer[tick % ringBuffer.length];
+	cursor = { x, y };
+	switch (event.buttons)
+	{
+		case 1:
+			data[y * width + x] = cursorMode;
+			break;
+		case 2:
+			data[y * width + x] = 0;
+			break;
+	}
+	render();
+}
+
+function toggleGrid()
+{
+	showGrid = !showGrid;
+	render();
 }
 
 function toggleTheme()
