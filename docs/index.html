@@ -7,7 +7,7 @@
 </head>
 <body>
 	<button style="float: right;" onclick="toggleTheme()">Theme</button>
-	<div id="controls">
+	<div>
 		<button onclick="back()" title="Go back one tick">Back</button>
 		<button onclick="stop()" title="Stop simulating">Stop</button>
 		<button onclick="stop(); step()" title="Go forward one tick">Step</button>
@@ -22,6 +22,7 @@
 		<button onclick="cursorMode = 2" title="Draw devices by clicking and erase by right-clicking">Draw Device</button>
 	</div>
 	<canvas
+		id="canvas"
 		onwheel="zoomIn(event)"
 		onmousemove="mouse(event)"
 		onmousedown="mouse(event)"
@@ -30,6 +31,18 @@
 		oncontextmenu="event.preventDefault()"
 	>
 	</canvas>
+	<div>
+		<button onclick="share()" title="Create copyable URL and image representations of the current state of the simulation">Share</button>
+	</div>
+	<div>
+		<a id="copyable-link" href="" target="_blank"></a>
+	</div>
+	<div>
+		<canvas id="copyable-canvas" width="0" height="0"></canvas>
+	</div>
+	<div>
+		<span id="share-message"></span>
+	</div>
 	<script src="index.js"></script>
 </body>
 </html>

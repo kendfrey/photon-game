@@ -1,4 +1,4 @@
-const canvas = document.querySelector("canvas");
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const transitions = buildTransitions();
 let ringBuffer;
@@ -22,11 +22,58 @@ catch
 }
 darkMode ??= matchMedia("(prefers-color-scheme: dark)").matches;
 
-const data = new Uint8Array(64 * 64);
-data[0] = 1;
-data[20 * 64 + 19] = 2;
-loadState(data, 64);
-render();
+document.addEventListener("paste", paste);
+
+try
+{
+	if (location.hash.length > 1)
+	{
+		const bytes = Uint8Array.fromBase64(location.hash.substring(1));
+		const w = bytes[0] | (bytes[1] << 8);
+		const decoded = [];
+		let curByte = 0;
+		for (let i = 2; i < bytes.length; i++)
+		{
+			const byte = bytes[i];
+			if ((byte & 0xC0) === 0xC0)
+			{
+				const len = (byte & 0x3F) + 2;
+				for (let j = 0; j < len; j++)
+					decoded.push(curByte);
+			}
+			else
+			{
+				decoded.push(byte);
+				curByte = byte;
+			}
+		}
+		const h = w === 0 ? 0 : Math.floor((decoded.length) / w);
+		const data = new Uint8Array(w * h * 4);
+		for (let y = 0; y < h; y++)
+		{
+			for (let x = 0; x < w; x++)
+			{
+				const byte = decoded[y * w + x];
+				data[(y * 2) * w * 2 + (x * 2)] = byte & 3;
+				data[(y * 2) * w * 2 + (x * 2 + 1)] = (byte >> 2) & 3;
+				data[(y * 2 + 1) * w * 2 + (x * 2)] = (byte >> 4) & 3;
+				data[(y * 2 + 1) * w * 2 + (x * 2 + 1)] = (byte >> 6) & 3;
+			}
+		}
+		loadState(data, w * 2);
+	}
+}
+catch
+{
+}
+
+if (!ringBuffer)
+{
+	const data = new Uint8Array(64 * 64);
+	data[0] = 1;
+	data[20 * 64 + 19] = 2;
+	loadState(data, 64);
+}
 
 function buildTransitions()
 {
@@ -99,7 +146,6 @@ function buildTransitions()
 
 function loadState(data, w)
 {
-
 	width = w;
 	height = Math.floor(data.length / w);
 	resizeCanvas();
@@ -109,6 +155,153 @@ function loadState(data, w)
 	for (let i = 1; i < ringBuffer.length; i++)
 	{
 		ringBuffer[i] = new Uint8Array(data.length);
+	}
+	render();
+}
+
+async function share()
+{
+	const data = ringBuffer[tick % ringBuffer.length];
+	const offset = tick % 2;
+	let w = width + offset;
+	let h = height + offset;
+	if (w % 2 === 1)
+		w++;
+	if (h % 2 === 1)
+		h++;
+
+	const rleEncoded = [(w >> 1) & 0xFF, (w >> 9) & 0xFF];
+	let curByte = 0;
+	let curLen = 0;
+	for (let y = 0; y < h; y += 2)
+	{
+		for (let x = 0; x < w; x += 2)
+		{
+			let byte = 0;
+			let dataX = x - offset;
+			let dataY = y - offset;
+			if (dataX >= 0 && dataY >= 0)
+				byte |= data[dataY * width + dataX];
+			if (dataX + 1 < width && dataY >= 0)
+				byte |= data[dataY * width + dataX + 1] << 2;
+			if (dataX >= 0 && dataY + 1 < height)
+				byte |= data[(dataY + 1) * width + dataX] << 4;
+			if (dataX + 1 < width && dataY + 1 < height)
+				byte |= data[(dataY + 1) * width + dataX + 1] << 6;
+
+			if (byte === curByte && curLen > 0)
+			{
+				curLen++;
+				continue;
+			}
+			if (curLen > 0)
+			{
+				rleEncoded.push(curByte);
+				curLen--;
+				while (curLen > 0)
+				{
+					if (curLen === 1)
+					{
+						rleEncoded.push(curByte);
+						curLen--;
+					}
+					else
+					{
+						const len = Math.min(63, curLen);
+						rleEncoded.push(0xC0 | (len - 2));
+						curLen -= len;
+					}
+				}
+			}
+
+			curByte = byte;
+			curLen = 1;
+		}
+	}
+	if (curLen > 0)
+	{
+		rleEncoded.push(curByte);
+		curLen--;
+		while (curLen > 0)
+		{
+			if (curLen === 1)
+			{
+				rleEncoded.push(curByte);
+				curLen--;
+			}
+			else
+			{
+				const len = Math.min(63, curLen);
+				rleEncoded.push(0xC0 | (len - 2));
+				curLen -= len;
+			}
+		}
+	}
+	const link = document.getElementById("copyable-link");
+	link.href = `#${new Uint8Array(rleEncoded).toBase64()}`;
+	link.textContent = "Shareable link";
+
+	const imageData = ctx.createImageData(w, h);
+
+	for (let i = 0; i < imageData.data.length; i++)
+		imageData.data[i] = 255;
+
+	for (let y = 0; y < height; y++)
+	{
+		for (let x = 0; x < width; x++)
+		{
+			const val = data[y * width + x];
+			switch (val)
+			{
+				case 1:
+					imageData.data[((y + offset) * w + (x + offset)) * 4 + 0] = 0;
+					imageData.data[((y + offset) * w + (x + offset)) * 4 + 1] = 0xCC;
+					imageData.data[((y + offset) * w + (x + offset)) * 4 + 2] = 0;
+					break;
+				case 2:
+					imageData.data[((y + offset) * w + (x + offset)) * 4 + 0] = 0;
+					imageData.data[((y + offset) * w + (x + offset)) * 4 + 1] = 0;
+					imageData.data[((y + offset) * w + (x + offset)) * 4 + 2] = 0;
+					break;
+			}
+		}
+	}
+
+	const copyableCanvas = document.getElementById("copyable-canvas");
+	copyableCanvas.width = w;
+	copyableCanvas.height = h;
+	const copyableCtx = copyableCanvas.getContext("2d");
+	copyableCtx.putImageData(imageData, 0, 0);
+	document.getElementById("share-message").textContent = "The above image or link can be copied to the clipboard. An image can be pasted into the page to load it.";
+}
+
+async function paste(event)
+{
+	for (const item of event.clipboardData.items)
+	{
+		if (item.type.startsWith("image/"))
+		{
+			event.preventDefault();
+			const file = item.getAsFile();
+			const bitmap = await createImageBitmap(file);
+			const offscreenCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+			const offscreenCtx = offscreenCanvas.getContext("2d");
+			offscreenCtx.drawImage(bitmap, 0, 0);
+			const imageData = offscreenCtx.getImageData(0, 0, bitmap.width, bitmap.height);
+			const data = new Uint8Array(imageData.width * imageData.height);
+			for (let y = 0; y < imageData.height; y++)
+			{
+				for (let x = 0; x < imageData.width; x++)
+				{
+					const r = imageData.data[(y * imageData.width + x) * 4 + 0];
+					const g = imageData.data[(y * imageData.width + x) * 4 + 1];
+					if (r < 128)
+						data[y * imageData.width + x] = g < 128 ? 2 : 1;
+				}
+			}
+			loadState(data, imageData.width);
+			return;
+		}
 	}
 }
 
