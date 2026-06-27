@@ -8,18 +8,18 @@
 <body>
 	<button style="float: right;" onclick="toggleTheme()">Theme</button>
 	<div id="controls">
-		<button onclick="back()">Back</button>
-		<button onclick="stop()">Stop</button>
-		<button onclick="stop(); step()">Step</button>
-		<button onclick="go(1000)">Slow</button>
-		<button onclick="go(100)">Medium</button>
-		<button onclick="go(10)">Fast</button>
-		<button onclick="go(0)">Unlimited</button>
+		<button onclick="back()" title="Go back one tick">Back</button>
+		<button onclick="stop()" title="Stop simulating">Stop</button>
+		<button onclick="stop(); step()" title="Go forward one tick">Step</button>
+		<button onclick="go(1000)" title="Run simulation at slow speed">Slow</button>
+		<button onclick="go(100)" title="Run simulation at medium speed">Medium</button>
+		<button onclick="go(10)" title="Run simulation at fast speed">Fast</button>
+		<button onclick="go(0)" title="Run simulation at maximum speed">Maximum</button>
 	</div>
 	<div>
-		<button onclick="toggleGrid()">Show Grid</button>
-		<button onclick="cursorMode = 1">Draw Photons</button>
-		<button onclick="cursorMode = 2">Draw Device</button>
+		<button onclick="toggleGrid()" title="Draw a grid which clarifies the orientation of cells">Show Grid</button>
+		<button onclick="cursorMode = 1" title="Draw photons by clicking and erase by right-clicking">Draw Photons</button>
+		<button onclick="cursorMode = 2" title="Draw devices by clicking and erase by right-clicking">Draw Device</button>
 	</div>
 	<canvas
 		onwheel="zoomIn(event)"
