@@ -9,7 +9,15 @@ let minTick = 0;
 let zoom = 8;
 let interval = undefined;
 let timeout = undefined;
-let darkMode = matchMedia("(prefers-color-scheme: dark)").matches;
+let darkMode;
+try
+{
+	darkMode = JSON.parse(localStorage.getItem("photon-game-dark"));
+}
+catch
+{
+}
+darkMode ??= matchMedia("(prefers-color-scheme: dark)").matches;
 
 const data = new Uint8Array(64 * 64);
 data[0] = 1;
@@ -217,4 +225,5 @@ function toggleTheme()
 {
 	darkMode = !darkMode;
 	render();
+	localStorage.setItem("photon-game-dark", JSON.stringify(darkMode));
 }
