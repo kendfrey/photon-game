@@ -10,6 +10,7 @@ let zoom = 1;
 let cursor = undefined;
 let cursorMode = 1;
 let showGrid = false;
+let sharedTick = undefined;
 let interval = undefined;
 let timeout = undefined;
 let darkMode;
@@ -171,6 +172,7 @@ function reset()
 
 function share()
 {
+	sharedTick = tick;
 	const data = ringBuffer[tick % ringBuffer.length];
 	const offset = tick % 2;
 	let w = width + offset;
@@ -443,6 +445,11 @@ function render()
 			}
 		}
 	}
+
+	document.getElementById("step").textContent = `Step ${tick}`;
+
+	if (sharedTick !== tick)
+		stopSharing();
 }
 
 function zoomIn(event)
@@ -472,9 +479,13 @@ function mouse(event)
 	{
 		case 1:
 			data[y * width + x] = cursorMode;
+			minTick = tick;
+			stopSharing();
 			break;
 		case 2:
 			data[y * width + x] = 0;
+			minTick = tick;
+			stopSharing();
 			break;
 	}
 	render();
@@ -491,4 +502,19 @@ function toggleTheme()
 	darkMode = !darkMode;
 	render();
 	localStorage.setItem("photon-game-dark", JSON.stringify(darkMode));
+}
+
+function stopSharing()
+{
+	if (sharedTick !== undefined)
+	{
+		sharedTick = undefined;
+		const link = document.getElementById("copyable-link");
+		link.href = "";
+		link.textContent = "";
+		const copyableCanvas = document.getElementById("copyable-canvas");
+		copyableCanvas.width = 0;
+		copyableCanvas.height = 0;
+		document.getElementById("share-message").textContent = "";
+	}
 }
