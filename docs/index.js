@@ -151,7 +151,7 @@ function loadState(data, w)
 	height = Math.floor(data.length / w);
 	document.getElementById("width").valueAsNumber = width;
 	document.getElementById("height").valueAsNumber = height;
-	zoom = Math.max(1, Math.min(32, 1 << Math.floor(Math.log2(512 / Math.max(width, height)))));
+	zoom = Math.min(32, 1 << Math.max(0, Math.floor(Math.log2(512 / Math.max(width, height)))));
 	resizeCanvas();
 	tick = 0;
 	ringBuffer = new Array(1024);
