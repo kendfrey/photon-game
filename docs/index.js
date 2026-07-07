@@ -286,7 +286,7 @@ function share()
 		}
 	}
 	const link = document.getElementById("copyable-link");
-	link.href = `#${new Uint8Array(rleEncoded).toBase64()}`;
+	link.href = `#data:${new Uint8Array(rleEncoded).toBase64()}`;
 	link.textContent = "Shareable link";
 
 	const imageData = ctx.createImageData(w, h);
