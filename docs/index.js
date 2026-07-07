@@ -27,42 +27,10 @@ document.addEventListener("paste", paste);
 
 try
 {
-	if (location.hash.length > 1)
-	{
-		const bytes = Uint8Array.fromBase64(location.hash.substring(1));
-		const w = bytes[0] | (bytes[1] << 8);
-		const decoded = [];
-		let curByte = 0;
-		for (let i = 2; i < bytes.length; i++)
-		{
-			const byte = bytes[i];
-			if ((byte & 0xC0) === 0xC0)
-			{
-				const len = (byte & 0x3F) + 2;
-				for (let j = 0; j < len; j++)
-					decoded.push(curByte);
-			}
-			else
-			{
-				decoded.push(byte);
-				curByte = byte;
-			}
-		}
-		const h = w === 0 ? 0 : Math.floor((decoded.length) / w);
-		const data = new Uint8Array(w * h * 4);
-		for (let y = 0; y < h; y++)
-		{
-			for (let x = 0; x < w; x++)
-			{
-				const byte = decoded[y * w + x];
-				data[(y * 2) * w * 2 + (x * 2)] = byte & 3;
-				data[(y * 2) * w * 2 + (x * 2 + 1)] = (byte >> 2) & 3;
-				data[(y * 2 + 1) * w * 2 + (x * 2)] = (byte >> 4) & 3;
-				data[(y * 2 + 1) * w * 2 + (x * 2 + 1)] = (byte >> 6) & 3;
-			}
-		}
-		loadState(data, w * 2);
-	}
+	if (location.hash.startsWith("#data:"))
+		loadStateFromBase64(location.hash.substring(6));
+	else if (location.hash.startsWith("#url:"))
+		loadStateFromUrl(location.hash.substring(5));
 }
 catch
 {
@@ -143,6 +111,74 @@ function buildTransitions()
 	}
 
 	return transitions;
+}
+
+function loadStateFromBase64(base64)
+{
+	const bytes = Uint8Array.fromBase64(base64);
+	const w = bytes[0] | (bytes[1] << 8);
+	const decoded = [];
+	let curByte = 0;
+	for (let i = 2; i < bytes.length; i++)
+	{
+		const byte = bytes[i];
+		if ((byte & 0xC0) === 0xC0)
+		{
+			const len = (byte & 0x3F) + 2;
+			for (let j = 0; j < len; j++)
+				decoded.push(curByte);
+		}
+		else
+		{
+			decoded.push(byte);
+			curByte = byte;
+		}
+	}
+	const h = w === 0 ? 0 : Math.floor((decoded.length) / w);
+	const data = new Uint8Array(w * h * 4);
+	for (let y = 0; y < h; y++)
+	{
+		for (let x = 0; x < w; x++)
+		{
+			const byte = decoded[y * w + x];
+			data[(y * 2) * w * 2 + (x * 2)] = byte & 3;
+			data[(y * 2) * w * 2 + (x * 2 + 1)] = (byte >> 2) & 3;
+			data[(y * 2 + 1) * w * 2 + (x * 2)] = (byte >> 4) & 3;
+			data[(y * 2 + 1) * w * 2 + (x * 2 + 1)] = (byte >> 6) & 3;
+		}
+	}
+	loadState(data, w * 2);
+}
+
+async function loadStateFromUrl(url)
+{
+	const response = await fetch(url);
+	if (response.ok && response.headers.get("content-type")?.startsWith("image/"))
+	{
+		const blob = await response.blob();
+		await loadStateFromImage(blob);
+	}
+}
+
+async function loadStateFromImage(blob)
+{
+	const bitmap = await createImageBitmap(blob);
+	const offscreenCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+	const offscreenCtx = offscreenCanvas.getContext("2d");
+	offscreenCtx.drawImage(bitmap, 0, 0);
+	const imageData = offscreenCtx.getImageData(0, 0, bitmap.width, bitmap.height);
+	const data = new Uint8Array(imageData.width * imageData.height);
+	for (let y = 0; y < imageData.height; y++)
+	{
+		for (let x = 0; x < imageData.width; x++)
+		{
+			const r = imageData.data[(y * imageData.width + x) * 4 + 0];
+			const g = imageData.data[(y * imageData.width + x) * 4 + 1];
+			if (r < 128)
+				data[y * imageData.width + x] = g < 128 ? 2 : 1;
+		}
+	}
+	loadState(data, imageData.width);
 }
 
 function loadState(data, w)
@@ -287,7 +323,7 @@ function share()
 	document.getElementById("share-message").textContent = "The above image or link can be copied to the clipboard. An image can be pasted into the page to load it.";
 }
 
-async function paste(event)
+function paste(event)
 {
 	for (const item of event.clipboardData.items)
 	{
@@ -295,23 +331,7 @@ async function paste(event)
 		{
 			event.preventDefault();
 			const file = item.getAsFile();
-			const bitmap = await createImageBitmap(file);
-			const offscreenCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-			const offscreenCtx = offscreenCanvas.getContext("2d");
-			offscreenCtx.drawImage(bitmap, 0, 0);
-			const imageData = offscreenCtx.getImageData(0, 0, bitmap.width, bitmap.height);
-			const data = new Uint8Array(imageData.width * imageData.height);
-			for (let y = 0; y < imageData.height; y++)
-			{
-				for (let x = 0; x < imageData.width; x++)
-				{
-					const r = imageData.data[(y * imageData.width + x) * 4 + 0];
-					const g = imageData.data[(y * imageData.width + x) * 4 + 1];
-					if (r < 128)
-						data[y * imageData.width + x] = g < 128 ? 2 : 1;
-				}
-			}
-			loadState(data, imageData.width);
+			loadStateFromImage(file);
 			return;
 		}
 	}
